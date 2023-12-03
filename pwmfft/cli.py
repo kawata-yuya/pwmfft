@@ -62,6 +62,12 @@ def main() -> None:
         )
         
         oscillo_dft.save_dft_real_result(path.join(output_file_path, f"05dft結果_{oscillo_data_info['filename']}.csv"),)
+        oscillo_dft.save_frequency_contents_result(
+            filepath=path.join(output_file_path, f"06高調波含有率_結果_{oscillo_data_info['filename']}.csv"),
+            fundamental_frequency=FUNDAMENTAL_FREQUENCY,
+            max_order=20,
+            insert_invalid_contents=False
+        )
         
         print("歪み率[%]")
         print(f"{oscillo_data_info['filename']}: {oscillo_dft.get_total_harmonic_distribution(50)}%")

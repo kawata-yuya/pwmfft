@@ -67,6 +67,8 @@ class OscilloscopeDftFromCsv:
         Exception
             指定したファイルが見つからない場合に発生します。
         """
+        
+        # すでに別のファイルを読み込んでいた場合は初期化
         if self._filename:
             self.__init__()
         
@@ -226,6 +228,48 @@ class OscilloscopeDftFromCsv:
             X=save_arr,
             delimiter=',',
             header="frequency[Hz], amplitude[V]"
+        )
+    
+    def save_frequency_contents_result(
+            self,
+            filepath:str,
+            fundamental_frequency:float,
+            max_order:int,
+            insert_invalid_contents:bool=True,
+        ) -> None:
+        """
+        高調波含有率の結果をCSVファイルに保存します。
+
+        Parameters
+        ----------
+        filepath : str
+            CSVを保存するパス。
+        fundamental_frequency : float
+            基本周波数
+        max_order : int
+            最大次数
+        insert_invalid_contents : bool, optional
+            最大倍数が分析可能な最大周波数を超えた場合に
+            無効成分を挿入するかどうか（デフォルトはTrue）。
+        
+        Notes
+        -----
+        CSVファイルはカンマで区切られ、ヘッダーには"order, content[％]"が含まれます。
+        order列は次数、content[％]列はその高調波含有率を表します。
+        """
+
+        frequency_contents = self.get_frequency_contents(
+            fundamental_frequency=fundamental_frequency,
+            max_order=max_order,
+            insert_invalid_contents=insert_invalid_contents,
+        )
+
+        save_arr = np.stack([np.arange(frequency_contents.shape[0]), frequency_contents], axis=1)
+        np.savetxt(
+            fname=filepath,
+            X=save_arr,
+            delimiter=',',
+            header="order, content[%]"
         )
     
     

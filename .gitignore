@@ -1,6 +1,5 @@
 *.log
 *.pyc
-*.csv
-*.png
+csv/
+output/
 __pycache__/
-
