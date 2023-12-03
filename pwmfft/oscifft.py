@@ -33,14 +33,11 @@ class OscilloscopeDftFromCsv:
     _sampling_period : float
         サンプリング周期
     """
-    def __init__(self, filename: str):
+    def __init__(self):
         """
-        Parameters
-        ----------
-        filename : str
-            CSVファイル名。
+        初期化
         """
-        self._filename: str = filename
+        self._filename: str = ''
         self._second_values:  np.array  = np.array([])
         self._voltage_values: np.array  = np.array([])
         self._frequency_for_complex: np.array = np.array([])
@@ -56,23 +53,25 @@ class OscilloscopeDftFromCsv:
         self._sampling_period: float = 0.0
 
     
-    def process(self) -> None:
-        """
-        CSVファイルを読み込み、DFT(離散フーリエ変換)を実行する
-        """
-        self.read_csv()
-        self.dft()
-        return
-    
-    def read_csv(self) -> None:
+    def read_csv(self, filename:str) -> None:
         """
         CSVファイルを読み込み、_second_valuesと_voltage_valuesの配列にデータを保存します。
+
+        Parameters
+        ----------
+        filename : str
+            CSVファイル名。
 
         Raises
         ------
         Exception
             指定したファイルが見つからない場合に発生します。
         """
+        if self._filename:
+            self.__init__()
+        
+        self._filename = filename
+        
         try:
             _matrix_tmp =  np.loadtxt(
                 fname=self._filename,
@@ -156,7 +155,8 @@ class OscilloscopeDftFromCsv:
             insert_invalid_contents:bool=True,
         ) -> np.ndarray:
         """
-        与えられた基本周波数の倍数の最大次数までの振幅の配列(0次を含む)を返します。
+        与えられた基本周波数の倍数の最大次数までの
+        振幅の配列(0次を含む)を返します。
 
         Parameters
         ----------
@@ -165,12 +165,14 @@ class OscilloscopeDftFromCsv:
         max_order : int
             最大次数
         insert_invalid_contents : bool, optional
-            最大倍数が分析可能な最大周波数を超えた場合に無効成分を挿入するかどうか（デフォルトはTrue）。
+            最大倍数が分析可能な最大周波数を超えた場合に
+            無効成分を挿入するかどうか（デフォルトはTrue）。
 
         Returns
         -------
         np.ndarray
-            基本周波数の倍数ごとの振幅の配列(0次を含む)。各振幅は基本周波数成分の振幅で正規化され、パーセント表記されます。
+            基本周波数の倍数ごとの振幅の配列(0次を含む)。
+            各振幅は基本周波数成分の振幅で正規化され、パーセント表記されます。
         """
         
         if (not insert_invalid_contents and 
@@ -227,7 +229,8 @@ class OscilloscopeDftFromCsv:
         )
     
     
-    # 各属性のゲッターは以下の通りです。それぞれのゲッターは対応する属性を返します。これによって、属性は内部的に変更可能でありながら外部からは読み取り専用となります。
+    # 各属性のゲッターは以下の通りです。それぞれのゲッターは対応する属性を返します。
+    # 属性は内部的に変更可能でありながら外部からは読み取り専用となります。
     @property
     def frequency_for_complex(self) -> np.ndarray:
         return self._frequency_for_complex

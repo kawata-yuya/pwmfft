@@ -49,7 +49,7 @@ def plot_frequency_contents(
     ax1.text(-5, -30, "基\n本\n波")
     ax2.text(0.7, -30, "基\n本\n波")
     
-    ax1.plot(range(501), target.get_frequency_contents(fundamental_frequency, 500), c="#000000", clip_on=False) 
+    ax1.bar(range(501), target.get_frequency_contents(fundamental_frequency, 500), color="#000000", align="center", clip_on=False) 
     ax2.plot(range(21),  target.get_frequency_contents(fundamental_frequency, 20), marker="s", c="#000000", clip_on=False)
 
     

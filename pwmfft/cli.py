@@ -16,50 +16,55 @@ def main() -> None:
     
     
     files = glob.glob("csv/*.csv")
-    oscillo_data = [{
-        "object": OscilloscopeDftFromCsv(fname),
-        "filepath": fname,
+    oscillo_dft = OscilloscopeDftFromCsv()
+    
+    file_data = [{
+        "filepath": '',
         "filename": path.splitext(path.basename(fname))[0],
     }  for fname in files]
     
     
     
-    for target in oscillo_data:
-        target["object"].read_csv()
-        target["object"].dft()
-    
 
-    for target in oscillo_data:
+    for filepath in files:
+        oscillo_data_info = {
+            "filepath": filepath,
+            "filename": path.splitext(path.basename(filepath))[0],
+        }
+                        
+        oscillo_dft.read_csv(oscillo_data_info['filepath'])                
+        oscillo_dft.dft()
+        
         plot_waveform(
-            target["object"],
-            path.join(output_file_path, f"01出力電圧波形_{target['filename']}.png")
+            oscillo_dft,
+            path.join(output_file_path, f"01出力電圧波形_{oscillo_data_info['filename']}.png")
         )
         
         plot_frequency_contents(
-            target["object"],
-            path.join(output_file_path, f"02高調波含有率_{target['filename']}.png"),
+            oscillo_dft,
+            path.join(output_file_path, f"02高調波含有率_{oscillo_data_info['filename']}.png"),
             FUNDAMENTAL_FREQUENCY,
         )
         plot_spectrum(
-            target["object"],
-            path.join(output_file_path, f"03スペクトラム(小)_{target['filename']}.png"),
+            oscillo_dft,
+            path.join(output_file_path, f"03スペクトラム(小)_{oscillo_data_info['filename']}.png"),
             max_plot_frequency=250,
             marker=True,
-            title=target['filename'],
+            title=oscillo_data_info['filename'],
         )
 
         plot_spectrum(
-            target["object"],
-            path.join(output_file_path, f"04スペクトラム(大)_{target['filename']}.png"),
+            oscillo_dft,
+            path.join(output_file_path, f"04スペクトラム(大)_{oscillo_data_info['filename']}.png"),
             max_plot_frequency=0,
             marker=False,
-            title=target['filename'],
+            title=oscillo_data_info['filename'],
         )
         
-        target['object'].save_dft_real_result(path.join(output_file_path, f"05dft結果_{target['filename']}.csv"),)
+        oscillo_dft.save_dft_real_result(path.join(output_file_path, f"05dft結果_{oscillo_data_info['filename']}.csv"),)
         
         print("歪み率[%]")
-        print(f"{target['filename']}: {target['object'].get_total_harmonic_distribution(50)}%")
+        print(f"{oscillo_data_info['filename']}: {oscillo_dft.get_total_harmonic_distribution(50)}%")
     
 
     return
