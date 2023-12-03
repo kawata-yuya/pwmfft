@@ -18,14 +18,11 @@ def main() -> None:
     files = glob.glob("csv/*.csv")
     oscillo_dft = OscilloscopeDftFromCsv()
     
-    file_data = [{
-        "filepath": '',
-        "filename": path.splitext(path.basename(fname))[0],
-    }  for fname in files]
+    oscillo_data_info = {
+        "filepath": "",
+        "filename": "",
+    }
     
-    
-    
-
     for filepath in files:
         oscillo_data_info = {
             "filepath": filepath,
