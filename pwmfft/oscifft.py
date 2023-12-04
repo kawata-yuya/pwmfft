@@ -148,6 +148,9 @@ class OscilloscopeDftFromCsv:
         """
         start_near_index = np.argmin((self._frequency_for_real - a)**2)
         end_near_index   = np.argmin((self._frequency_for_real - b)**2)
+        if start_near_index == end_near_index:
+            return np.array(self.get_frequency_component(a))
+        
         return self._amplitude_real[start_near_index:end_near_index]
     
     def get_frequency_contents(
@@ -281,13 +284,14 @@ class OscilloscopeDftFromCsv:
             max_order=max_order,
             insert_invalid_contents=insert_invalid_contents,
         )
+        frequency_contents_voltage = frequency_contents * self.get_frequency_component(fundamental_frequency) / 100.0
 
-        save_arr = np.stack([np.arange(frequency_contents.shape[0]), frequency_contents], axis=1)
+        save_arr = np.stack([np.arange(frequency_contents.shape[0]), frequency_contents_voltage, frequency_contents], axis=1)
         np.savetxt(
             fname=filepath,
             X=save_arr,
             delimiter=',',
-            header="order, content[%]"
+            header="order, voltage[V], content[%]"
         )
     
     
