@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.fft import fft, fftfreq
+from numpy.fft import fft, fftfreq, ifft
 
 
 class OscilloscopeDftFromCsv:
@@ -107,8 +107,8 @@ class OscilloscopeDftFromCsv:
         self._max_frequency = self._frequency_for_real.max()
         self._min_frequency = self._frequency_for_real.min()
         
-        self._amplitude_complex = fft(self._voltage_values) / self._number_of_sample
-        self._amplitude_real = np.abs(self._amplitude_complex[:self._number_of_sample//2]) * 2.0
+        self._amplitude_complex = fft(self._voltage_values)
+        self._amplitude_real = np.abs(self._amplitude_complex[:self._number_of_sample//2]) * 2.0 / self._number_of_sample
         self._amplitude_real[0] /= 2.0
         
         return
@@ -207,6 +207,24 @@ class OscilloscopeDftFromCsv:
                                                             99999, False)
         
         return float(np.sqrt((_frequency_contents[2:]**2).sum()))
+    
+    def get_particular_frequencies_waveform(
+            self,
+            min_freq:float,
+            max_freq:float
+        ):
+        """
+        特定の周波数成分のみを出力波形から取り出し
+        電圧波形を出力する関数
+        """
+        upper_conditions = np.abs(self._frequency_for_complex) >= min_freq
+        lower_conditions = np.abs(self._frequency_for_complex) <= max_freq
+        dones_meet_conditions = upper_conditions and lower_conditions
+        
+        amplitude = np.where(dones_meet_conditions, self._amplitude_complex, 0)
+        
+        return self._second_values, ifft(amplitude)
+    
     
     def save_dft_real_result(self, filepath):
         """
