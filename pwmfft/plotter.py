@@ -36,7 +36,7 @@ def plot_frequency_contents(
     ax2.set_xlabel("次数")
     ax1.set_ylabel("高調波含有率[%]")
     ax2.set_ylabel("高調波含有率[%]")
-    ax1.set_title("(a) 基本波から700次まで", y=-0.35)
+    ax1.set_title("(a) 基本波から500次まで", y=-0.35)
     ax2.set_title("(b) 基本波から20次まで",  y=-0.35)
     ax1.set_xlim(0, 500)
     ax2.set_xlim(0, 20)
@@ -44,9 +44,9 @@ def plot_frequency_contents(
     ax2.set_ylim(0, 120)
     
     ax1.set_xticks([50*i for i in range(1, 11)])
-    ax2.set_xticks([i for i in range(21) if i != 1], y=-30)
+    ax2.set_xticks([i for i in range(21)], [str(i) if i!=1 else '' for i in range(21)])
     
-    ax1.text(-5, -30, "基\n本\n波")
+    ax1.text(-8, -30, "基\n本\n波")
     ax2.text(0.7, -30, "基\n本\n波")
     
     ax1.bar(range(501), target.get_frequency_contents(fundamental_frequency, 500), color="#000000", align="center", clip_on=False) 
