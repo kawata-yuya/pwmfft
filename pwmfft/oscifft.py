@@ -5,7 +5,7 @@ NULL_ARRAY = np.array([])
 
 class OscilloCsvLoader:
     def __init__(self):
-        self._filename: str = filename
+        self._filename: str = ''
         self._second_values:   np.ndarray = NULL_ARRAY
         self._voltage_values1: np.ndarray = NULL_ARRAY
         self._voltage_values2: np.ndarray = NULL_ARRAY
