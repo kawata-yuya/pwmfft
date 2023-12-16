@@ -1,9 +1,30 @@
 import numpy as np
 from numpy.fft import fft, fftfreq, ifft
 
-NULL_ARRAY = np.array([])
+NULL_ARRAY = np.array([])       # np.empty(0)
 
 class OscilloCsvLoader:
+    """
+    CSVファイルから波形データを読み込むためのクラス。
+
+    Attributes
+    ----------
+    _filename : str
+        CSVファイル名
+    _second_values : np.ndarray
+        時間軸のデータを保持する1次元NumPy配列。
+    _voltage_values1 : np.ndarray
+        チャンネル1の電圧データを保持する1次元NumPy配列。
+    _voltage_values2 : np.ndarray
+        チャンネル2の電圧データを保持する1次元NumPy配列。存在しない場合はNULL_ARRAY。
+    _has_2ch : bool
+        チャンネル2が存在するかどうかを示すブール値。
+
+    Methods
+    -------
+    load_csv(filename: str)
+        CSVファイルを読み込み、データを対応する属性に保存する。
+    """
     def __init__(self):
         self._filename: str = ''
         self._second_values:   np.ndarray = NULL_ARRAY
@@ -11,7 +32,7 @@ class OscilloCsvLoader:
         self._voltage_values2: np.ndarray = NULL_ARRAY
         self._has_2ch: bool = False
         
-    def load_csv(self, filename: str):
+    def load_csv(self, filename: str) -> None:
         """
         CSVファイルを読み込み、
         _second_valuesと_voltage_values1、
@@ -73,34 +94,32 @@ class OscilloCsvLoader:
 
 class DFTFFTProcessor:
     """
-    CSVファイルから取得したオシロスコープのデータを管理し、DFT変換を行うクラス
-    
+    オシロスコープデータを管理し、DFT変換を行うクラス
+
     Attributes
     ----------
-    _filename : str
-        CSVファイル名
-    _second_values : np.array
-        時間の配列
-    _voltage_values : np.array
-        電圧値の配列
-    _frequency_for_complex : np.array
-        複素数表現の周波数の配列
-    _frequency_for_real : np.array
-        実数表現の周波数の配列（半分のサイズ）
-    _amplitude_complex : np.array
-        周波数に対する振幅(複素数)
-    _amplitude_real : np.array
-        周波数に対する振幅(実数)
+    _second_values : np.ndarray
+        時間軸のデータを保持する1次元NumPy配列。
+    _voltage_values : np.ndarray
+        電圧データを保持する1次元NumPy配列。
+    _frequency_for_complex : np.ndarray
+        複素数表現の周波数の配列。
+    _frequency_for_real : np.ndarray
+        実数表現の周波数の配列（半分のサイズ）。
+    _amplitude_complex : np.ndarray
+        周波数に対する振幅（複素数）。
+    _amplitude_real : np.ndarray
+        周波数に対する振幅（実数）。
     _max_frequency : float
-        最大の周波数
+        最大の周波数。
     _min_frequency : float
-        最小の周波数
+        最小の周波数。
     _number_of_sample : int
-        サンプル数
+        サンプル数。
     _sampling_time : float
-        サンプリング時間
+        サンプリング時間。
     _sampling_period : float
-        サンプリング周期
+        サンプリング周期。
     """
     def __init__(
         self,
@@ -108,9 +127,15 @@ class DFTFFTProcessor:
         voltage_values: np.ndarray,
     ):
         """
-        初期化
+        DFTFFTProcessorクラスのインスタンスを初期化する。
+
+        Parameters
+        ----------
+        second_values : np.ndarray
+            時間軸のデータを保持する1次元NumPy配列。
+        voltage_values : np.ndarray
+            電圧データを保持する1次元NumPy配列。
         """
-        self._filename: str = ''
         self._second_values: np.array  = second_values
         self._voltage_values: np.array = voltage_values
         self._frequency_for_complex: np.array = NULL_ARRAY
@@ -126,7 +151,25 @@ class DFTFFTProcessor:
         self._sampling_period:float = 0.0
     
     @staticmethod
-    def from_csv_loader(loader: OscilloCsvLoader, ch: int=1):
+    def from_csv_loader(
+        loader: OscilloCsvLoader,
+        ch: int=1
+    ) -> DFTFFTProcessor:
+        """
+        OscilloCsvLoaderからDFTFFTProcessorを生成するクラスメソッド。
+
+        Parameters
+        ----------
+        loader : OscilloCsvLoader
+            OscilloCsvLoaderのインスタンス。
+        ch : int, optional
+            チャンネル番号（デフォルトは1）。
+
+        Returns
+        -------
+        DFTFFTProcessor
+            生成されたDFTFFTProcessorのインスタンス。
+        """
         if ch == 1:
             return DFTFFTProcessor(loader.second_values, loader.voltage_values1)
         elif ch == 2:
@@ -263,8 +306,19 @@ class DFTFFTProcessor:
             max_freq:float
         ):
         """
-        特定の周波数成分のみを出力波形から取り出し
-        電圧波形を出力する関数
+        特定の周波数範囲のみを出力波形から取り出し、電圧波形を出力するメソッド。
+
+        Parameters
+        ----------
+        min_freq : float
+            最小周波数。
+        max_freq : float
+            最大周波数。
+
+        Returns
+        -------
+        Tuple[np.ndarray, np.ndarray]
+            時間軸のデータと特定の周波数範囲内の電圧波形。
         """
         upper_conditions = np.abs(self._frequency_for_complex) >= min_freq
         lower_conditions = np.abs(self._frequency_for_complex) <= max_freq
@@ -321,7 +375,8 @@ class DFTFFTProcessor:
         
         Notes
         -----
-        CSVファイルはカンマで区切られ、ヘッダーには"order, content[％]"が含まれます。
+        CSVファイルはカンマで区切られ、
+        ヘッダーには"order, voltage[V], content[%]"が含まれます。
         order列は次数、content[％]列はその高調波含有率を表します。
         """
 

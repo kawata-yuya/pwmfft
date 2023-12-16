@@ -11,25 +11,131 @@ plt.rcParams['ytick.direction'] = 'in'
 
 
 class PWMPlotterAndCsvOut:
+    """
+    DFTFFTProcessorから得られたデータを可視化、
+    CSVにて出力するためのプロッターとCSV出力クラス。
+
+    Attributes
+    ----------
+    _target : DFTFFTProcessor
+        可視化および出力対象のDFTFFTProcessorクラスのインスタンス。
+    _input_filename : str
+        入力データのファイル名。
+    _output_directory_path : str
+        出力ファイルを保存するディレクトリのパス。
+    _number_of_outputs : int
+        出力ファイルの通し番号。
+    _FUNDAMENTAL_FREQUENCY : float
+        基本周波数。
+    _dpi : int
+        出力ファイルの解像度（dots per inch）。
+
+    Methods
+    -------
+    plot_frequency_contents()
+        高調波含有率のグラフを生成し、保存する。
+    plot_spectrum(max_plot_frequency=0.0, marker=False)
+        スペクトラムのプロットを生成し、保存する。
+    plot_waveform()
+        電圧対時刻の波形をプロットし、保存する。
+    save_dft_real_result()
+        実数表現によるDFT結果をCSVファイルに保存する。
+    save_frequency_contents_result(max_order=20, insert_invalid_contents=False)
+        高調波含有率の結果をCSVファイルに保存する。
+    save_total_total_harmonic_distribution()
+        歪み率の結果をCSVファイルに保存する。
+    """
     def __init__(
         self,
         target: DFTFFTProcessor,
         input_filename: str,
         output_file_directory_path: str,
         fundamental_frequency: float,
-    ):
+        dpi: int = 300,
+        ):
+        """
+        PWMPlotterAndCsvOutの初期化メソッド。
+
+        Parameters
+        ----------
+        target : DFTFFTProcessor
+            DFTの結果を算出するDFTFFTProcessorクラスのインスタンス。
+        input_filename : str
+            入力ファイル名。
+        output_file_directory_path : str
+            出力ファイルを保存するディレクトリのパス。
+        fundamental_frequency : float
+            基本周波数。
+        dpi : int, optional
+            出力ファイルの解像度（デフォルトは300）。
+        """
         self._target: DFTFFTProcessor = target
         self._input_filename: str = input_filename
         self._output_directory_path: str = output_file_directory_path
         self._number_of_outputs: int = 0
         self._FUNDAMENTAL_FREQUENCY = fundamental_frequency
+        self._dpi = dpi
 
     def _get_output_filepath(self, filename, extension="png"):
+        """
+        出力ファイルのパスを取得するメソッド。
+
+        Parameters
+        ----------
+        filename : str
+            ファイル名。
+        extension : str, optional
+            ファイルの拡張子（デフォルトは"png"）。
+
+        Returns
+        -------
+        str
+            出力ファイルのパス。
+
+        Notes
+        -----
+        このメソッドは内部でファイルの出力回数を管理し、
+        出力ファイル名には通し番号が付与されます。
+
+        Example
+        -------
+        >>> pwm_plotter = PWMPlotterAndCsvOut(target_instance, "input_file", "output_directory", 100)
+        >>> pwm_plotter._get_output_filepath("高調波含有率")
+        "output_directory/01_高調波含有率_input_file.png"
+        >>> pwm_plotter._get_output_filepath("スペクトラム", "jpg")
+        "output_directory/02_スペクトラム_input_file.jpg"
+        """
         self._number_of_outputs += 1
         return path.join(
                 self._output_directory_path,
                 f"{self._number_of_outputs:02}_{filename}_{self._input_filename}.{extension}"
             )
+
+    @property
+    def dpi(self) -> int:
+        """
+        出力画像のDPIを取得します。
+
+        Returns
+        -------
+        int
+            出力画像のDPI。
+        """
+        return self._dpi
+
+    @dpi.setter
+    def dpi(self, value: int) -> None:
+        """
+        出力画像のDPIを設定します。
+
+        Parameters
+        ----------
+        value : int
+            設定するDPI。
+        """
+        if not isinstance(value, int) or value <= 0:
+            raise ValueError("DPIは正の整数である必要があります。")
+        self._dpi = value
 
     def plot_frequency_contents(
             self,
@@ -67,7 +173,7 @@ class PWMPlotterAndCsvOut:
 
         plt.savefig(
             self._get_output_filepath("高調波含有率"),
-            dpi=300
+            dpi=self._dpi
         )
         plt.close()
         return
@@ -117,7 +223,7 @@ class PWMPlotterAndCsvOut:
 
         plt.savefig(
             self._get_output_filepath(f"スペクトラム({subtitle})"), 
-            dpi=300
+            dpi=self._dpi
         )
         plt.close()
 
@@ -143,11 +249,14 @@ class PWMPlotterAndCsvOut:
 
         plt.savefig(
             self._get_output_filepath("出力電圧波形"),
-            dpi=300
+            dpi=self._dpi
         )
         plt.close()
 
     def save_dft_real_result(self):
+        """
+        実数表現によるDFT結果（周波数成分とその振幅）をCSVファイルに保存します。
+        """
         self._target.save_dft_real_result(
             self._get_output_filepath("dft結果", "csv")
         )
@@ -157,6 +266,17 @@ class PWMPlotterAndCsvOut:
             max_order = 20,
             insert_invalid_contents=False,
         ):
+        """
+        高調波含有率の結果をCSVファイルに保存します。
+
+        Parameters
+        ----------
+        max_order : int, optional
+            最大次数（デフォルトは20）。
+        insert_invalid_contents : bool, optional
+            最大倍数が分析可能な最大周波数を超えた場合に
+            無効成分を挿入するかどうか（デフォルトはFalse）。
+        """
         self._target.save_frequency_contents_result(
             filepath=self._get_output_filepath("高調波含有率_結果", "csv"),
             fundamental_frequency = self._FUNDAMENTAL_FREQUENCY,
@@ -165,6 +285,9 @@ class PWMPlotterAndCsvOut:
         )
     
     def save_total_total_harmonic_distribution(self):
+        """
+        歪み率の結果をCSVファイルに保存します。
+        """
         thd_tmp = self._target.get_total_harmonic_distribution(self._FUNDAMENTAL_FREQUENCY)
         with open(path.join(self._output_directory_path, "歪み率.csv"), "a") as f:
             f.write(f"{self._input_filename}, {thd_tmp}\n")
