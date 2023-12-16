@@ -16,26 +16,21 @@ def main() -> None:
     files = glob.glob("csv/*.csv")
     loader = OscilloCsvLoader()
     
+    
     with open("歪み率.csv", "w") as f:
         f.write("filename, 歪み率[%]\n")
 
     for filepath in files:
-        oscillo_data_info = {
-            "filepath": filepath,
-            "filename": path.splitext(path.basename(filepath))[0],
-        }
-        
-        
         # ASCII形式のデータを読み込み
-        loader.load_csv(oscillo_data_info["filepath"])
+        loader.load_csv(filepath)
         oscillo_dft = DFTFFTProcessor.from_csv_loader(loader)
         # 読み込んだデータをDFT変換
         oscillo_dft.dft()
         
-        
+        # plot管理クラスの定義
         pwm_plot = PWMPlotterAndCsvOut(
             target=oscillo_dft,
-            input_filename=oscillo_data_info["filename"],
+            input_filename=path.splitext(path.basename(filepath))[0],
             output_file_directory_path=output_file_path,
             fundamental_frequency=FUNDAMENTAL_FREQUENCY,
         )
