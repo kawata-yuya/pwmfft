@@ -1,5 +1,5 @@
 from .oscifft import DFTFFTProcessor, OscilloCsvLoader
-from .plotter import plot_frequency_contents, plot_spectrum, plot_waveform
+from .plotter import PWMPlotterAndCsvOut
 import glob
 from os import path, pardir
 
@@ -13,76 +13,56 @@ def main() -> None:
     parent_dir = path.abspath(path.join(current_dir, pardir))
     output_file_path = path.join(parent_dir, "output")
 
-    
-    
     files = glob.glob("csv/*.csv")
     loader = OscilloCsvLoader()
     
-    oscillo_data_info = {
-        "filepath": "",
-        "filename": "",
-    }
-    
-    
-    with open(path.join(output_file_path, '歪み率.csv'), 'w') as f:
+    with open("歪み率.csv", "w") as f:
         f.write("filename, 歪み率[%]\n")
+
+    for filepath in files:
+        oscillo_data_info = {
+            "filepath": filepath,
+            "filename": path.splitext(path.basename(filepath))[0],
+        }
         
-        for filepath in files:
-            oscillo_data_info = {
-                "filepath": filepath,
-                "filename": path.splitext(path.basename(filepath))[0],
-            }
-
-            
-            # ASCII形式のデータを読み込み
-            loader.load_csv(oscillo_data_info["filepath"])
-            oscillo_dft = DFTFFTProcessor.from_csv_loader(loader)
-            # 読み込んだデータをDFT変換
-            oscillo_dft.dft()
-
-            # 電圧波形を出力
-            plot_waveform(
-                oscillo_dft,
-                path.join(output_file_path, f"01出力電圧波形_{oscillo_data_info['filename']}.png")
-            )
-
-            # 周波数含有率のグラフを出力
-            plot_frequency_contents(
-                oscillo_dft,
-                path.join(output_file_path, f"02高調波含有率_{oscillo_data_info['filename']}.png"),
-                FUNDAMENTAL_FREQUENCY,
-            )
-
-            # 考察用のスペクトラムを出力
-            plot_spectrum(
-                oscillo_dft,
-                path.join(output_file_path, f"03スペクトラム(小)_{oscillo_data_info['filename']}.png"),
-                max_plot_frequency=250,
-                marker=True,
-                title=oscillo_data_info['filename'],
-            )
-
-            # 考察用のスペクトラムを出力
-            plot_spectrum(
-                oscillo_dft,
-                path.join(output_file_path, f"04スペクトラム(大)_{oscillo_data_info['filename']}.png"),
-                max_plot_frequency=0,
-                marker=False,
-                title=oscillo_data_info['filename'],
-            )
-
-            # DFT変換の結果をcsvファイルに保存
-            oscillo_dft.save_dft_real_result(path.join(output_file_path, f"05dft結果_{oscillo_data_info['filename']}.csv"),)
-            oscillo_dft.save_frequency_contents_result(
-                filepath=path.join(output_file_path, f"06高調波含有率_結果_{oscillo_data_info['filename']}.csv"),
-                fundamental_frequency=FUNDAMENTAL_FREQUENCY,
-                max_order=20,
-                insert_invalid_contents=False
-            )
-
-            # 歪み率の表示
-            total_harmonic_distribution = oscillo_dft.get_total_harmonic_distribution(FUNDAMENTAL_FREQUENCY)
-            f.write(f"{oscillo_data_info['filename']}, {total_harmonic_distribution}\n")
-    
+        
+        # ASCII形式のデータを読み込み
+        loader.load_csv(oscillo_data_info["filepath"])
+        oscillo_dft = DFTFFTProcessor.from_csv_loader(loader)
+        # 読み込んだデータをDFT変換
+        oscillo_dft.dft()
+        
+        
+        pwm_plot = PWMPlotterAndCsvOut(
+            target=oscillo_dft,
+            input_filename=oscillo_data_info["filename"],
+            output_file_directory_path=output_file_path,
+            fundamental_frequency=FUNDAMENTAL_FREQUENCY,
+        )
+        
+        # 電圧波形を出力
+        pwm_plot.plot_waveform()
+        
+        # 周波数含有率のグラフを出力
+        
+        pwm_plot.plot_frequency_contents()
+        
+        # 考察用のスペクトラムを出力
+        pwm_plot.plot_spectrum(
+            max_plot_frequency=250.0,
+            marker=True,
+        )
+        
+        # 考察用のスペクトラムを出力
+        pwm_plot.plot_spectrum(
+            marker=False,
+        )
+        
+        # DFT変換の結果をcsvファイルに保存
+        pwm_plot.save_dft_real_result()
+        pwm_plot.save_frequency_contents_result()
+        
+        # 歪み率の保存
+        pwm_plot.save_total_total_harmonic_distribution()
 
     return
