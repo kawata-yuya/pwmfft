@@ -120,6 +120,29 @@ class DFTFFTProcessor:
         サンプリング時間。
     _sampling_period : float
         サンプリング周期。
+
+    Methods
+    -------
+    __init__(second_values: np.ndarray, voltage_values: np.ndarray)
+        DFTFFTProcessorクラスのインスタンスを初期化する。
+    from_csv_loader(loader: OscilloCsvLoader, ch: int=1) -> DFTFFTProcessor
+        OscilloCsvLoaderからDFTFFTProcessorを生成するクラスメソッド。
+    dft() -> None
+        Discrete Fourier Transform（離散フーリエ変換）を実行し、周波数と振幅を計算する。
+    get_frequency_component(f: float) -> float
+        指定した周波数に最も近い周波数成分の振幅を返す。
+    get_frequency_components(a: float, b: float) -> np.ndarray
+        2つの周波数範囲で周波数成分の振幅を返す。
+    get_frequency_contents(fundamental_frequency: float, max_order: int, insert_invalid_contents: bool=True) -> np.ndarray
+        基本周波数の倍数の最大次数までの振幅の配列を返す。
+    get_total_harmonic_distribution(fundamental_frequency: float) -> float
+        基本周波数に対する歪み率を計算する。
+    get_particular_frequencies_waveform(min_freq: float, max_freq: float) -> Tuple[np.ndarray, np.ndarray]
+        特定の周波数範囲のみを出力波形から取り出し、電圧波形を返す。
+    save_dft_real_result(filepath: str) -> None
+        実数表現によるDFT結果をCSVファイルに保存する。
+    save_frequency_contents_result(filepath: str, fundamental_frequency: float, max_order: int, insert_invalid_contents: bool=True) -> None
+        高調波含有率の結果をCSVファイルに保存する。
     """
     def __init__(
         self,
@@ -176,6 +199,44 @@ class DFTFFTProcessor:
             if not loader.has_2ch:
                 raise ValueError("ch=2としましたが、loderには2chの情報はありませんでした。")
             return DFTFFTProcessor(loader.second_values, loader.voltage_values2)
+    
+    # 各属性のゲッターは以下の通りです。それぞれのゲッターは対応する属性を返します。
+    # 属性は内部的に変更可能でありながら外部からは読み取り専用となります。
+    @property
+    def frequency_for_complex(self) -> np.ndarray:
+        return self._frequency_for_complex
+    
+    @property
+    def frequency_for_real(self) -> np.ndarray:
+        return self._frequency_for_real
+
+    @property
+    def amplitude_complex(self) -> np.ndarray:
+        return self._amplitude_complex
+    
+    @property
+    def amplitude_real(self) -> np.ndarray:
+        return self._amplitude_real
+    
+    @property
+    def second_values(self) -> np.ndarray:
+        return self._second_values
+    
+    @property
+    def voltage_values(self) -> np.ndarray:
+        return self._voltage_values
+    
+    @property
+    def sampling_time(self) -> float:
+        return self._sampling_time
+    
+    @property
+    def max_frequency(self) -> float:
+        return self._max_frequency
+    
+    @property
+    def min_frequency(self) -> float:
+        return self._min_frequency
         
     def dft(self) -> None:
         """
@@ -395,41 +456,3 @@ class DFTFFTProcessor:
             header="order, voltage[V], content[%]"
         )
     
-    
-    # 各属性のゲッターは以下の通りです。それぞれのゲッターは対応する属性を返します。
-    # 属性は内部的に変更可能でありながら外部からは読み取り専用となります。
-    @property
-    def frequency_for_complex(self) -> np.ndarray:
-        return self._frequency_for_complex
-    
-    @property
-    def frequency_for_real(self) -> np.ndarray:
-        return self._frequency_for_real
-
-    @property
-    def amplitude_complex(self) -> np.ndarray:
-        return self._amplitude_complex
-    
-    @property
-    def amplitude_real(self) -> np.ndarray:
-        return self._amplitude_real
-    
-    @property
-    def second_values(self) -> np.ndarray:
-        return self._second_values
-    
-    @property
-    def voltage_values(self) -> np.ndarray:
-        return self._voltage_values
-    
-    @property
-    def sampling_time(self) -> float:
-        return self._sampling_time
-    
-    @property
-    def max_frequency(self) -> float:
-        return self._max_frequency
-    
-    @property
-    def min_frequency(self) -> float:
-        return self._min_frequency
