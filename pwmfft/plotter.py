@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import japanize_matplotlib
 
-from .oscifft import OscilloscopeDftFromCsv
+from .oscifft import DFTFFTProcessor
 
 # 目盛りの向きを内側に設定
 plt.rcParams['xtick.direction'] = 'in'
@@ -9,7 +9,7 @@ plt.rcParams['ytick.direction'] = 'in'
 
 
 def plot_frequency_contents(
-        target:OscilloscopeDftFromCsv,
+        target:DFTFFTProcessor,
         filepath:str,
         fundamental_frequency:float,
     ) -> None:
@@ -18,8 +18,8 @@ def plot_frequency_contents(
 
     Parameters
     ----------
-    target : OscilloscopeDftFromCsv instance
-        DFTの結果を算出するOscilloscopeDftFromCsvクラスのインスタンス。
+    target : DFTFFTProcessor instance
+        DFTの結果を算出するDFTFFTProcessorクラスのインスタンス。
     filepath : str
         グラフを保存するパス。
     fundamental_frequency : float
@@ -58,7 +58,7 @@ def plot_frequency_contents(
     return
 
 def plot_spectrum(
-        target:OscilloscopeDftFromCsv,
+        target:DFTFFTProcessor,
         filepath:str,
         title:str,
         max_plot_frequency:float=0.0,
@@ -69,8 +69,8 @@ def plot_spectrum(
 
     Parameters
     ----------
-    target : OscilloscopeDftFromCsv instance
-        DFTの結果を算出するOscilloscopeDftFromCsvクラスのインスタンス。
+    target : DFTFFTProcessor instance
+        DFTの結果を算出するDFTFFTProcessorクラスのインスタンス。
     filepath : str
         グラフを保存するパス。
     title : str
@@ -102,14 +102,14 @@ def plot_spectrum(
     plt.savefig(filepath, dpi=300)
     plt.close()
 
-def plot_waveform(target: OscilloscopeDftFromCsv, filepath:str):
+def plot_waveform(target: DFTFFTProcessor, filepath:str):
     """
     電圧対時刻の波形をプロットし、指定されたパスに保存します。
 
     Parameters
     ----------
-    target : OscilloscopeDftFromCsv instance
-        DFTの結果を算出するOscilloscopeDftFromCsvクラスのインスタンス。
+    target : DFTFFTProcessor instance
+        DFTの結果を算出するDFTFFTProcessorクラスのインスタンス。
     filepath : str
         グラフを保存するパス。
     """

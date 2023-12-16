@@ -1,4 +1,4 @@
-from .oscifft import OscilloscopeDftFromCsv
+from .oscifft import DFTFFTProcessor, OscilloCsvLoader
 from .plotter import plot_frequency_contents, plot_spectrum, plot_waveform
 import glob
 from os import path, pardir
@@ -16,7 +16,7 @@ def main() -> None:
     
     
     files = glob.glob("csv/*.csv")
-    oscillo_dft = OscilloscopeDftFromCsv()
+    loader = OscilloCsvLoader()
     
     oscillo_data_info = {
         "filepath": "",
@@ -33,8 +33,10 @@ def main() -> None:
                 "filename": path.splitext(path.basename(filepath))[0],
             }
 
+            
             # ASCII形式のデータを読み込み
-            oscillo_dft.read_csv(oscillo_data_info['filepath'])
+            loader.load_csv(oscillo_data_info["filepath"])
+            oscillo_dft = DFTFFTProcessor.from_csv_loader(loader)
             # 読み込んだデータをDFT変換
             oscillo_dft.dft()
 
