@@ -1,8 +1,77 @@
 import numpy as np
 from numpy.fft import fft, fftfreq, ifft
 
+NULL_ARRAY = np.array([])
 
-class OscilloscopeDftFromCsv:
+class OscilloCsvLoader:
+    def __init__(self):
+        self._filename: str = filename
+        self._second_values:   np.ndarray = NULL_ARRAY
+        self._voltage_values1: np.ndarray = NULL_ARRAY
+        self._voltage_values2: np.ndarray = NULL_ARRAY
+        self._has_2ch: bool = False
+        
+    def load_csv(self, filename: str):
+        """
+        CSVファイルを読み込み、
+        _second_valuesと_voltage_values1、
+        _voltage_values2(ch2が存在する場合)の
+        配列にデータを保存します。
+
+        Parameters
+        ----------
+        filename : str
+            CSVファイル名。
+
+        Raises
+        ------
+        Exception
+            指定したファイルが見つからない場合に発生します。
+        """
+        
+        # すでに別のファイルを読み込んでいた場合は初期化
+        if self._filename != "":
+            self.__init__()
+        
+        self._filename = filename
+        
+        try:
+            _matrix_tmp =  np.loadtxt(
+                fname=self._filename,
+                dtype=np.float64, 
+                delimiter=',',
+                skiprows=2,
+            ).T
+
+            if _matrix_tmp.shape[0] == 2:
+                self._second_values, self._voltage_values1 = _matrix_tmp
+            else:
+                self._has_2ch = True
+                self._second_values   = _matrix_tmp[0]
+                self._voltage_values1 = _matrix_tmp[1]
+                self._voltage_values2 = _matrix_tmp[2]
+        
+        except FileNotFoundError:
+            raise Exception('有効なcsvファイルが見つかりませんでした。')
+    
+    @property
+    def second_values(self):
+        return self._second_values
+    
+    @property
+    def voltage_values1(self):
+        return self._voltage_values1
+    
+    @property
+    def voltage_values2(self):
+        return self._voltage_values2
+    
+    @property
+    def has_2ch(self):
+        return self._has_2ch
+
+
+class DFTFFTProcessor:
     """
     CSVファイルから取得したオシロスコープのデータを管理し、DFT変換を行うクラス
     
@@ -33,60 +102,37 @@ class OscilloscopeDftFromCsv:
     _sampling_period : float
         サンプリング周期
     """
-    def __init__(self):
+    def __init__(
+        self,
+        second_values:  np.ndarray,
+        voltage_values: np.ndarray,
+    ):
         """
         初期化
         """
         self._filename: str = ''
-        self._second_values:  np.array  = np.array([])
-        self._voltage_values: np.array  = np.array([])
-        self._frequency_for_complex: np.array = np.array([])
-        self._frequency_for_real: np.array  = np.array([])         # Half size
-        self._amplitude_complex: np.array = np.array([])
-        self._amplitude_real: np.array = np.array([])
+        self._second_values: np.array  = second_values
+        self._voltage_values: np.array = voltage_values
+        self._frequency_for_complex: np.array = NULL_ARRAY
+        self._frequency_for_real:    np.array = NULL_ARRAY         # Half size
+        self._amplitude_complex:     np.array = NULL_ARRAY
+        self._amplitude_real:        np.array = NULL_ARRAY
         
         self._max_frequency: float = 0.0
         self._min_frequency: float = 0.0
         
         self._number_of_sample: int = 0
-        self._sampling_time: float = 0.0
-        self._sampling_period: float = 0.0
-
+        self._sampling_time:  float = 0.0
+        self._sampling_period:float = 0.0
     
-    def read_csv(self, filename:str) -> None:
-        """
-        CSVファイルを読み込み、_second_valuesと_voltage_valuesの配列にデータを保存します。
-
-        Parameters
-        ----------
-        filename : str
-            CSVファイル名。
-
-        Raises
-        ------
-        Exception
-            指定したファイルが見つからない場合に発生します。
-        """
-        
-        # すでに別のファイルを読み込んでいた場合は初期化
-        if self._filename:
-            self.__init__()
-        
-        self._filename = filename
-        
-        try:
-            _matrix_tmp =  np.loadtxt(
-                fname=self._filename,
-                dtype=np.float64, 
-                delimiter=',',
-                skiprows=2,
-            ).T
-
-            self._second_values, self._voltage_values = _matrix_tmp
-        
-        except FileNotFoundError:
-            raise Exception('有効なcsvファイルが見つかりませんでした。')
-        
+    @staticmethod
+    def from_csv_loader(loader: OscilloCsvLoader, ch: int=1):
+        if ch == 1:
+            return DFTFFTProcessor(loader.second_values, loader.voltage_values1)
+        elif ch == 2:
+            if not loader.has_2ch:
+                raise ValueError("ch=2としましたが、loderには2chの情報はありませんでした。")
+            return DFTFFTProcessor(loader.second_values, loader.voltage_values2)
         
     def dft(self) -> None:
         """
