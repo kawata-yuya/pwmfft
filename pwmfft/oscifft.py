@@ -173,11 +173,12 @@ class DFTFFTProcessor:
         self._sampling_time:  float = 0.0
         self._sampling_period:float = 0.0
     
-    @staticmethod
+    @classmethod
     def from_csv_loader(
+        cls,
         loader: OscilloCsvLoader,
-        ch: int=1
-    ) -> DFTFFTProcessor:
+        ch: int=1,
+    ) -> 'DFTFFTProcessor':
         """
         OscilloCsvLoaderからDFTFFTProcessorを生成するクラスメソッド。
 
@@ -191,14 +192,18 @@ class DFTFFTProcessor:
         Returns
         -------
         DFTFFTProcessor
-            生成されたDFTFFTProcessorのインスタンス。
+        
+        Raises
+        ------
+        ValueError
+            ch=2と指定されたが、loaderには2chの情報がない場合に発生します。
         """
         if ch == 1:
-            return DFTFFTProcessor(loader.second_values, loader.voltage_values1)
+            return cls(loader.second_values, loader.voltage_values1)
         elif ch == 2:
             if not loader.has_2ch:
                 raise ValueError("ch=2としましたが、loderには2chの情報はありませんでした。")
-            return DFTFFTProcessor(loader.second_values, loader.voltage_values2)
+            return cls(loader.second_values, loader.voltage_values2)
     
     # 各属性のゲッターは以下の通りです。それぞれのゲッターは対応する属性を返します。
     # 属性は内部的に変更可能でありながら外部からは読み取り専用となります。
