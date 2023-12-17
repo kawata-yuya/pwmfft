@@ -1,61 +1,43 @@
 import numpy as np
 from numpy.fft import fft, fftfreq, ifft
 
+NULL_ARRAY = np.array([])       # np.empty(0)
 
-class OscilloscopeDftFromCsv:
+class OscilloCsvLoader:
     """
-    CSVファイルから取得したオシロスコープのデータを管理し、DFT変換を行うクラス
-    
+    CSVファイルから波形データを読み込むためのクラス。
+
     Attributes
     ----------
     _filename : str
         CSVファイル名
-    _second_values : np.array
-        時間の配列
-    _voltage_values : np.array
-        電圧値の配列
-    _frequency_for_complex : np.array
-        複素数表現の周波数の配列
-    _frequency_for_real : np.array
-        実数表現の周波数の配列（半分のサイズ）
-    _amplitude_complex : np.array
-        周波数に対する振幅(複素数)
-    _amplitude_real : np.array
-        周波数に対する振幅(実数)
-    _max_frequency : float
-        最大の周波数
-    _min_frequency : float
-        最小の周波数
-    _number_of_sample : int
-        サンプル数
-    _sampling_time : float
-        サンプリング時間
-    _sampling_period : float
-        サンプリング周期
+    _second_values : np.ndarray
+        時間軸のデータを保持する1次元NumPy配列。
+    _voltage_values1 : np.ndarray
+        チャンネル1の電圧データを保持する1次元NumPy配列。
+    _voltage_values2 : np.ndarray
+        チャンネル2の電圧データを保持する1次元NumPy配列。存在しない場合はNULL_ARRAY。
+    _has_2ch : bool
+        チャンネル2が存在するかどうかを示すブール値。
+
+    Methods
+    -------
+    load_csv(filename: str)
+        CSVファイルを読み込み、データを対応する属性に保存する。
     """
     def __init__(self):
-        """
-        初期化
-        """
         self._filename: str = ''
-        self._second_values:  np.array  = np.array([])
-        self._voltage_values: np.array  = np.array([])
-        self._frequency_for_complex: np.array = np.array([])
-        self._frequency_for_real: np.array  = np.array([])         # Half size
-        self._amplitude_complex: np.array = np.array([])
-        self._amplitude_real: np.array = np.array([])
+        self._second_values:   np.ndarray = NULL_ARRAY
+        self._voltage_values1: np.ndarray = NULL_ARRAY
+        self._voltage_values2: np.ndarray = NULL_ARRAY
+        self._has_2ch: bool = False
         
-        self._max_frequency: float = 0.0
-        self._min_frequency: float = 0.0
-        
-        self._number_of_sample: int = 0
-        self._sampling_time: float = 0.0
-        self._sampling_period: float = 0.0
-
-    
-    def read_csv(self, filename:str) -> None:
+    def load_csv(self, filename: str) -> None:
         """
-        CSVファイルを読み込み、_second_valuesと_voltage_valuesの配列にデータを保存します。
+        CSVファイルを読み込み、
+        _second_valuesと_voltage_values1、
+        _voltage_values2(ch2が存在する場合)の
+        配列にデータを保存します。
 
         Parameters
         ----------
@@ -69,7 +51,7 @@ class OscilloscopeDftFromCsv:
         """
         
         # すでに別のファイルを読み込んでいた場合は初期化
-        if self._filename:
+        if self._filename != "":
             self.__init__()
         
         self._filename = filename
@@ -82,11 +64,184 @@ class OscilloscopeDftFromCsv:
                 skiprows=2,
             ).T
 
-            self._second_values, self._voltage_values = _matrix_tmp
+            if _matrix_tmp.shape[0] == 2:
+                self._second_values, self._voltage_values1 = _matrix_tmp
+            else:
+                self._has_2ch = True
+                self._second_values   = _matrix_tmp[0]
+                self._voltage_values1 = _matrix_tmp[1]
+                self._voltage_values2 = _matrix_tmp[2]
         
         except FileNotFoundError:
             raise Exception('有効なcsvファイルが見つかりませんでした。')
+    
+    @property
+    def second_values(self):
+        return self._second_values
+    
+    @property
+    def voltage_values1(self):
+        return self._voltage_values1
+    
+    @property
+    def voltage_values2(self):
+        return self._voltage_values2
+    
+    @property
+    def has_2ch(self):
+        return self._has_2ch
+
+
+class DFTFFTProcessor:
+    """
+    オシロスコープデータを管理し、DFT変換を行うクラス
+
+    Attributes
+    ----------
+    _second_values : np.ndarray
+        時間軸のデータを保持する1次元NumPy配列。
+    _voltage_values : np.ndarray
+        電圧データを保持する1次元NumPy配列。
+    _frequency_for_complex : np.ndarray
+        複素数表現の周波数の配列。
+    _frequency_for_real : np.ndarray
+        実数表現の周波数の配列（半分のサイズ）。
+    _amplitude_complex : np.ndarray
+        周波数に対する振幅（複素数）。
+    _amplitude_real : np.ndarray
+        周波数に対する振幅（実数）。
+    _max_frequency : float
+        最大の周波数。
+    _min_frequency : float
+        最小の周波数。
+    _number_of_sample : int
+        サンプル数。
+    _sampling_time : float
+        サンプリング時間。
+    _sampling_period : float
+        サンプリング周期。
+
+    Methods
+    -------
+    __init__(second_values: np.ndarray, voltage_values: np.ndarray)
+        DFTFFTProcessorクラスのインスタンスを初期化する。
+    from_csv_loader(loader: OscilloCsvLoader, ch: int=1) -> DFTFFTProcessor
+        OscilloCsvLoaderからDFTFFTProcessorを生成するクラスメソッド。
+    dft() -> None
+        Discrete Fourier Transform（離散フーリエ変換）を実行し、周波数と振幅を計算する。
+    get_frequency_component(f: float) -> float
+        指定した周波数に最も近い周波数成分の振幅を返す。
+    get_frequency_components(a: float, b: float) -> np.ndarray
+        2つの周波数範囲で周波数成分の振幅を返す。
+    get_frequency_contents(fundamental_frequency: float, max_order: int, insert_invalid_contents: bool=True) -> np.ndarray
+        基本周波数の倍数の最大次数までの振幅の配列を返す。
+    get_total_harmonic_distribution(fundamental_frequency: float) -> float
+        基本周波数に対する歪み率を計算する。
+    get_particular_frequencies_waveform(min_freq: float, max_freq: float) -> Tuple[np.ndarray, np.ndarray]
+        特定の周波数範囲のみを出力波形から取り出し、電圧波形を返す。
+    save_dft_real_result(filepath: str) -> None
+        実数表現によるDFT結果をCSVファイルに保存する。
+    save_frequency_contents_result(filepath: str, fundamental_frequency: float, max_order: int, insert_invalid_contents: bool=True) -> None
+        高調波含有率の結果をCSVファイルに保存する。
+    """
+    def __init__(
+        self,
+        second_values:  np.ndarray,
+        voltage_values: np.ndarray,
+    ):
+        """
+        DFTFFTProcessorクラスのインスタンスを初期化する。
+
+        Parameters
+        ----------
+        second_values : np.ndarray
+            時間軸のデータを保持する1次元NumPy配列。
+        voltage_values : np.ndarray
+            電圧データを保持する1次元NumPy配列。
+        """
+        self._second_values: np.array  = second_values
+        self._voltage_values: np.array = voltage_values
+        self._frequency_for_complex: np.array = NULL_ARRAY
+        self._frequency_for_real:    np.array = NULL_ARRAY         # Half size
+        self._amplitude_complex:     np.array = NULL_ARRAY
+        self._amplitude_real:        np.array = NULL_ARRAY
         
+        self._max_frequency: float = 0.0
+        self._min_frequency: float = 0.0
+        
+        self._number_of_sample: int = 0
+        self._sampling_time:  float = 0.0
+        self._sampling_period:float = 0.0
+    
+    @classmethod
+    def from_csv_loader(
+        cls,
+        loader: OscilloCsvLoader,
+        ch: int=1,
+    ) -> 'DFTFFTProcessor':
+        """
+        OscilloCsvLoaderからDFTFFTProcessorを生成するクラスメソッド。
+
+        Parameters
+        ----------
+        loader : OscilloCsvLoader
+            OscilloCsvLoaderのインスタンス。
+        ch : int, optional
+            チャンネル番号（デフォルトは1）。
+
+        Returns
+        -------
+        DFTFFTProcessor
+        
+        Raises
+        ------
+        ValueError
+            ch=2と指定されたが、loaderには2chの情報がない場合に発生します。
+        """
+        if ch == 1:
+            return cls(loader.second_values, loader.voltage_values1)
+        elif ch == 2:
+            if not loader.has_2ch:
+                raise ValueError("ch=2としましたが、loderには2chの情報はありませんでした。")
+            return cls(loader.second_values, loader.voltage_values2)
+    
+    # 各属性のゲッターは以下の通りです。それぞれのゲッターは対応する属性を返します。
+    # 属性は内部的に変更可能でありながら外部からは読み取り専用となります。
+    @property
+    def frequency_for_complex(self) -> np.ndarray:
+        return self._frequency_for_complex
+    
+    @property
+    def frequency_for_real(self) -> np.ndarray:
+        return self._frequency_for_real
+
+    @property
+    def amplitude_complex(self) -> np.ndarray:
+        return self._amplitude_complex
+    
+    @property
+    def amplitude_real(self) -> np.ndarray:
+        return self._amplitude_real
+    
+    @property
+    def second_values(self) -> np.ndarray:
+        return self._second_values
+    
+    @property
+    def voltage_values(self) -> np.ndarray:
+        return self._voltage_values
+    
+    @property
+    def sampling_time(self) -> float:
+        return self._sampling_time
+    
+    @property
+    def max_frequency(self) -> float:
+        return self._max_frequency
+    
+    @property
+    def min_frequency(self) -> float:
+        return self._min_frequency
         
     def dft(self) -> None:
         """
@@ -217,8 +372,19 @@ class OscilloscopeDftFromCsv:
             max_freq:float
         ):
         """
-        特定の周波数成分のみを出力波形から取り出し
-        電圧波形を出力する関数
+        特定の周波数範囲のみを出力波形から取り出し、電圧波形を出力するメソッド。
+
+        Parameters
+        ----------
+        min_freq : float
+            最小周波数。
+        max_freq : float
+            最大周波数。
+
+        Returns
+        -------
+        Tuple[np.ndarray, np.ndarray]
+            時間軸のデータと特定の周波数範囲内の電圧波形。
         """
         upper_conditions = np.abs(self._frequency_for_complex) >= min_freq
         lower_conditions = np.abs(self._frequency_for_complex) <= max_freq
@@ -275,7 +441,8 @@ class OscilloscopeDftFromCsv:
         
         Notes
         -----
-        CSVファイルはカンマで区切られ、ヘッダーには"order, content[％]"が含まれます。
+        CSVファイルはカンマで区切られ、
+        ヘッダーには"order, voltage[V], content[%]"が含まれます。
         order列は次数、content[％]列はその高調波含有率を表します。
         """
 
@@ -294,41 +461,3 @@ class OscilloscopeDftFromCsv:
             header="order, voltage[V], content[%]"
         )
     
-    
-    # 各属性のゲッターは以下の通りです。それぞれのゲッターは対応する属性を返します。
-    # 属性は内部的に変更可能でありながら外部からは読み取り専用となります。
-    @property
-    def frequency_for_complex(self) -> np.ndarray:
-        return self._frequency_for_complex
-    
-    @property
-    def frequency_for_real(self) -> np.ndarray:
-        return self._frequency_for_real
-
-    @property
-    def amplitude_complex(self) -> np.ndarray:
-        return self._amplitude_complex
-    
-    @property
-    def amplitude_real(self) -> np.ndarray:
-        return self._amplitude_real
-    
-    @property
-    def second_values(self) -> np.ndarray:
-        return self._second_values
-    
-    @property
-    def voltage_values(self) -> np.ndarray:
-        return self._voltage_values
-    
-    @property
-    def sampling_time(self) -> float:
-        return self._sampling_time
-    
-    @property
-    def max_frequency(self) -> float:
-        return self._max_frequency
-    
-    @property
-    def min_frequency(self) -> float:
-        return self._min_frequency
